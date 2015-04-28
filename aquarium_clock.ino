@@ -35,7 +35,7 @@ unsigned long fade_after = 0;
 void setup() {
   setWhite(255);
   setBlue(255);
-  fade((unsigned long)(120000));  // fade after two minutes of full brightness
+  fade((unsigned long)(300000));  // fade after five minutes of full brightness
   
   u8g.begin();
   setSyncProvider(RTC.get);
