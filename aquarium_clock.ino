@@ -37,6 +37,9 @@ time_t utc, local;
 void printDigits(int);
 void printDigits(int, char, unsigned int);
 void digitalClockDisplay(time_t);
+void setWhite(unsigned int);
+void setBlue(unsigned int);
+void fade(unsigned long);
 
 #ifdef BEDROOM
 time_t get_time() {
@@ -62,7 +65,16 @@ time_t get_time() {
 }
 #endif
 
+unsigned int prevBlue = 0;
+unsigned int prevWhite = 0;
+
+unsigned long fade_after = 0;
+
 void setup() {
+  setWhite(255);
+  setBlue(255);
+  fade((unsigned long)(120000));  // fade after two minutes of full brightness
+  
   u8g.begin();
 #ifdef BEDROOM
   Bridge.begin();        // initialize Bridge
@@ -70,9 +82,6 @@ void setup() {
 
   setSyncProvider(TIME_PROVIDER);
 }
-
-int prevBlue = -1;
-int prevWhite = -1;
 
 void loop() {
   utc = now();
@@ -89,20 +98,58 @@ void loop() {
 
   if (blue < 0)
     blue = 0;
-
-  if (prevWhite != white) {
-    analogWrite(WHITE_PIN, white);
-    analogWrite(BACK_PIN, white);
-    prevWhite = white;
-  }
-
-  if (prevBlue != blue) {
-    analogWrite(BLUE_PIN, blue);
-    prevBlue = blue;
+  
+  if (fade_after == 0) {
+    setWhite(white);
+    setBlue(blue);    
+  } else if (fade_after <= millis()) {
+    bool needs_fade = false;
+    if (prevBlue < blue) {
+      blue = prevBlue + 1;
+      needs_fade = true;
+    } else if (prevBlue > blue) {
+      blue = prevBlue - 1;
+      needs_fade = true;
+    }
+    
+    if (prevWhite < white) {
+      white = prevWhite + 1;
+      needs_fade = true;
+    } else if (prevWhite > white) {
+      white = prevWhite - 1;
+      needs_fade = true;
+    }
+    
+    if (needs_fade) {
+      fade(100); 
+      setWhite(white);
+      setBlue(blue);
+    } else {
+      fade_after = 0;
+    }
   }
 
   render();
   delay(50);
+}
+
+void setWhite(unsigned int value) {
+  if (prevWhite != value) {
+    analogWrite(WHITE_PIN, value);
+    analogWrite(BACK_PIN, value);
+    prevWhite = value;
+  }
+}
+
+void setBlue(unsigned int value) {
+  if (prevBlue != value) {
+    analogWrite(BLUE_PIN, value);
+    prevBlue = value;
+  } 
+}
+
+void fade(unsigned long ms) {
+  fade_after = millis() + ms; 
 }
 
 void render()
@@ -116,14 +163,24 @@ void render()
 void draw()
 {
 //  u8g.setFont(u8g_font_unifont);
-  u8g.setFont(u8g_font_4x6);
-  u8g.setPrintPos(1, 30);
+//  u8g.setFont(u8g_font_4x6);
+  u8g.setFont(u8g_font_helvR08r);
+
+  u8g.setPrintPos(1, 25);
   u8g.print(F("Blue: "));
   u8g.print(prevBlue);
 
-  u8g.setPrintPos(1, 45);
+  u8g.setPrintPos(1, 35);
   u8g.print(F("White: "));
   u8g.print(prevWhite);
+
+  u8g.setPrintPos(1, 45);
+  u8g.print(F("Fade After: "));
+  u8g.println(fade_after);
+
+  u8g.setPrintPos(1, 55);
+  u8g.print(F("Millis: "));
+  u8g.println(millis());
 
   digitalClockDisplay(local);
 }
