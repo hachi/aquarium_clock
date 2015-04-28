@@ -1,22 +1,8 @@
 #include "U8glib.h"
 #include <Time.h>
 #include <Timezone.h>
-
-#define BEDROOM
-//#define BATHROOM
-
-#ifdef BEDROOM
-#include <Process.h>
-
-#define TIME_PROVIDER get_time
-#endif
-
-#ifdef BATHROOM
-#include <Wire.h>         //http://arduino.cc/en/Reference/Wire (included with Arduino IDE)
-#include <DS3232RTC.h>    //http://github.com/JChristensen/DS3232RTC
-
-#define TIME_PROVIDER RTC.get
-#endif
+#include <Wire.h>
+#include <DS3232RTC.h>
 
 #define BLUE_PIN  10
 #define WHITE_PIN 11
@@ -41,30 +27,6 @@ void setWhite(unsigned int);
 void setBlue(unsigned int);
 void fade(unsigned long);
 
-#ifdef BEDROOM
-time_t get_time() {
-  Process date;
-
-  if (!date.running()) {
-    date.begin(F("date"));
-    date.addParameter(F("+%s"));
-    date.run();
-  }
-
-  while (date.running()) {
-    delay(50);
-  }
-
-  if (date.available() > 0) {
-    String timeString = date.readString();
-    date.flush();
-    return timeString.toInt();
-  }
-
-  return 0;
-}
-#endif
-
 unsigned int prevBlue = 0;
 unsigned int prevWhite = 0;
 
@@ -76,11 +38,7 @@ void setup() {
   fade((unsigned long)(120000));  // fade after two minutes of full brightness
   
   u8g.begin();
-#ifdef BEDROOM
-  Bridge.begin();        // initialize Bridge
-#endif
-
-  setSyncProvider(TIME_PROVIDER);
+  setSyncProvider(RTC.get);
 }
 
 void loop() {
